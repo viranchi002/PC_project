@@ -4,7 +4,8 @@
 #include <assert.h>
 #include<stdbool.h>
 #include <math.h>
-
+#include <omp.h>
+#include<time.h>
 float distance2(const float *v1, const float *v2, const int d) {
   float dist = 0.0;
   for (int i=0; i<d; i++) {
@@ -13,7 +14,12 @@ float distance2(const float *v1, const float *v2, const int d) {
   }
   return dist;
 }
-
+double cpu_time(void)
+{
+  double value;
+  value=(double) clock()/ (double) CLOCKS_PER_SEC;
+  return value;
+}
 float* search(float *site2,float *centroids,int k,int d)
 {
 	//int *closest;
@@ -110,6 +116,7 @@ int main(int argc, char** argv) {
       "Usage: kmeans num_sites_per_proc num_means num_dimensions\n");
     exit(1);
   }
+  double start=cpu_time();
   int m=0;
   // Get stuff from command line:
     // number of sites per processor.
@@ -311,7 +318,11 @@ int main(int argc, char** argv) {
       printf("%4d\n", all_labels[i]);
     }
   }
-      
+  if(rank==0)
+  {
+  double stop=cpu_time();  
+  printf("Time elapsed: %f", stop-start);  
+  }
   MPI_Finalize();
 
 }

@@ -146,23 +146,26 @@ private:
 	// return ID of nearest center (uses euclidean distance)
 	int getIDNearestCenter(Point point)
 	{
+		int i,j;
 		double sum = 0.0, min_dist;
 		int id_cluster_center = 0;
-
-		for(int i = 0; i < total_values; i++)
+#pragma omp parallel
+{
+#pragma omp for private(i)
+		for(i = 0; i < total_values; i++)
 		{
 			sum += pow(clusters[0].getCentralValue(i) -
 					   point.getValue(i), 2.0);
 		}
-
+#pragma omp single
 		min_dist = sqrt(sum);
-
-		for(int i = 1; i < K; i++)
+#pragma omp for private(i,j) reduction(+:sum) collapse(1)
+		for(i = 1; i < K; i++)
 		{
 			double dist;
 			sum = 0.0;
 
-			for(int j = 0; j < total_values; j++)
+			for(j = 0; j < total_values; j++)
 			{
 				sum += pow(clusters[i].getCentralValue(j) -
 						   point.getValue(j), 2.0);
@@ -176,7 +179,7 @@ private:
 				id_cluster_center = i;
 			}
 		}
-
+}
 		return id_cluster_center;
 	}
 
@@ -220,7 +223,10 @@ public:
 		while(true)
 		{
 			bool done = true;
-
+			double sum=0.0;
+#pragma omp parallel
+{
+	#pragma omp for private(i)
 			// associates each point to the nearest center
 			for(int i = 0; i < total_points; i++)
 			{
@@ -237,8 +243,8 @@ public:
 					done = false;
 				}
 			}
-
-			// recalculating the center of each cluster
+int i,j,p;
+#pragma omp for private(i,j,p) reduction(+:sum) collapse(1)
 			for(int i = 0; i < K; i++)
 			{
 				for(int j = 0; j < total_values; j++)
@@ -254,7 +260,7 @@ public:
 					}
 				}
 			}
-
+}
 			if(done == true || iter >= max_iterations)
 			{
 				cout << "Break in iteration " << iter << "\n\n";

@@ -136,7 +136,7 @@ public:
 	}
 };
 
-class KMeans
+class Kmedoid
 {
 private:
 	int K; // number of clusters
@@ -146,23 +146,26 @@ private:
 	// return ID of nearest center (uses euclidean distance)
 	int getIDNearestCenter(Point point)
 	{
+		int i,j;
 		double sum = 0.0, min_dist;
 		int id_cluster_center = 0;
-
-		for(int i = 0; i < total_values; i++)
+#pragma omp parallel
+{
+#pragma omp for private(i)
+		for(i = 0; i < total_values; i++)
 		{
 			sum += pow(clusters[0].getCentralValue(i) -
 					   point.getValue(i), 2.0);
 		}
-
+#pragma omp single
 		min_dist = sqrt(sum);
-
-		for(int i = 1; i < K; i++)
+#pragma omp for private(i,j) reduction(+:sum) collapse(1)
+		for(i = 1; i < K; i++)
 		{
 			double dist;
 			sum = 0.0;
 
-			for(int j = 0; j < total_values; j++)
+			for(j = 0; j < total_values; j++)
 			{
 				sum += pow(clusters[i].getCentralValue(j) -
 						   point.getValue(j), 2.0);
@@ -176,12 +179,12 @@ private:
 				id_cluster_center = i;
 			}
 		}
-
+}
 		return id_cluster_center;
 	}
 
 public:
-	KMeans(int K, int total_points, int total_values, int max_iterations)
+	Kmedoid(int K, int total_points, int total_values, int max_iterations)
 	{
 		this->K = K;
 		this->total_points = total_points;
@@ -220,7 +223,10 @@ public:
 		while(true)
 		{
 			bool done = true;
-
+			double sum=0.0;
+#pragma omp parallel
+{
+	#pragma omp for private(i)
 			// associates each point to the nearest center
 			for(int i = 0; i < total_points; i++)
 			{
@@ -237,24 +243,43 @@ public:
 					done = false;
 				}
 			}
-
-			// recalculating the center of each cluster
-			for(int i = 0; i < K; i++)
+int i,j,p;
+#pragma omp for private(i,j,p) reduction(+:sum) collapse(1)
+	for(int i = 0; i < K; i++)
 			{
-				for(int j = 0; j < total_values; j++)
-				{
+					double dist,min2=99999.0;
 					int total_points_cluster = clusters[i].getTotalPoints();
-					double sum = 0.0;
-
+					int cent;
 					if(total_points_cluster > 0)
 					{
 						for(int p = 0; p < total_points_cluster; p++)
-							sum += clusters[i].getPoint(p).getValue(j);
-						clusters[i].setCentralValue(j, sum / total_points_cluster);
+						{
+							dist=0.0;
+							for(int q = 0; q < total_points_cluster; q++)
+							{
+								if(p!=q)
+								{
+									for(int j=0;j<total_values;j++)
+									{
+										if(clusters[i].getPoint(p).getValue(j) > clusters[i].getPoint(q).getValue(j))
+										dist+=clusters[i].getPoint(p).getValue(j) - clusters[i].getPoint(q).getValue(j);
+										else
+										dist+=clusters[i].getPoint(q).getValue(j) - clusters[i].getPoint(p).getValue(j);
+									}
+								}
+							}
+							if(dist<min2)
+							{
+								min2=dist;
+								cent=p;
+							}
+						}
+						for(int j=0;j<total_values;j++)
+						clusters[i].setCentralValue(j, clusters[i].getPoint(cent).getValue(j));
 					}
-				}
 			}
 
+		}
 			if(done == true || iter >= max_iterations)
 			{
 				cout << "Break in iteration " << iter << "\n\n";
@@ -329,8 +354,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	KMeans kmeans(K, total_points, total_values, max_iterations);
-	kmeans.run(points);
+	Kmedoid kmedoid(K, total_points, total_values, max_iterations);
+	kmedoid.run(points);
 	double stop=cpu_time();
 	double time=(stop-start);
 	cout<<"Running time for "<< total_points <<" points is " <<time;

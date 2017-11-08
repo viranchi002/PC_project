@@ -2,7 +2,14 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <assert.h>
-
+#include <omp.h>
+#include<time.h>
+double cpu_time(void)
+{
+  double value;
+  value=(double) clock()/ (double) CLOCKS_PER_SEC;
+  return value;
+}
 // Creates an array of random floats. Each number has a value from 0 - 1
 float* create_rand_nums(const int num_elements) {
   float *rand_nums = (float *)malloc(sizeof(float) * num_elements);
@@ -66,7 +73,7 @@ int main(int argc, char** argv) {
       "Usage: kmeans num_sites_per_proc num_means num_dimensions\n");
     exit(1);
   }
-
+  double start=cpu_time();
   // Get stuff from command line:
     // number of sites per processor.
     // number of processors comes from mpirun command line.  -n
@@ -200,7 +207,10 @@ int main(int argc, char** argv) {
       printf("%4d\n", all_labels[i]);
     }
   }
-      
+    
   MPI_Finalize();
-
+  if(rank==0)
+   {double stop=cpu_time(); 
+    printf("Time elapsed: %f", stop-start/1000);  
+}
 }

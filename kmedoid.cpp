@@ -6,7 +6,12 @@
 #include <algorithm>
 
 using namespace std;
-
+double cpu_time(void)
+{
+  double value;
+  value=(double) clock()/ (double) CLOCKS_PER_SEC;
+  return value;
+}
 class Point
 {
 private:
@@ -314,7 +319,7 @@ int main(int argc, char *argv[])
 	int total_points, total_values, K, max_iterations, has_name;
 
 	cin >> total_points >> total_values >> K >> max_iterations >> has_name;
-
+double start=cpu_time();
 	vector<Point> points;
 	string point_name;
 
@@ -344,7 +349,8 @@ int main(int argc, char *argv[])
 
 	KMeans kmeans(K, total_points, total_values, max_iterations);
 	kmeans.run(points);
-
+double stop=cpu_time();
+cout<<"Elapsed time "<<stop-start;
 	return 0;
 
 }
