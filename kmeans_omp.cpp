@@ -334,9 +334,15 @@ int main(int argc, char *argv[])
 			points.push_back(p);
 		}
 	}
-
-	KMeans kmeans(K, total_points, total_values, max_iterations);
-	kmeans.run(points);
+	#pragma omp parallel
+	{
+		#pragma omp master
+		{
+			KMeans kmeans(K, total_points, total_values, max_iterations);
+			kmeans.run(points);
+		}	
+	}
+	
 	double stop=cpu_time();
 	double time=(stop-start);
 	cout<<"Running time for "<< total_points <<" points is " <<time;

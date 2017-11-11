@@ -354,8 +354,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	Kmedoid kmedoid(K, total_points, total_values, max_iterations);
-	kmedoid.run(points);
+	#pragma omp parallel shared(K,total_points,total_values,max_iterations,points)
+	{
+		#pragma omp master
+		{
+			Kmedoid kmedoid(K, total_points, total_values, max_iterations);
+			kmedoid.run(points);
+		}	
+	}
+	
 	double stop=cpu_time();
 	double time=(stop-start);
 	cout<<"Running time for "<< total_points <<" points is " <<time;
